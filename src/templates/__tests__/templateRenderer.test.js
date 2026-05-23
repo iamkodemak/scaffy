@@ -12,6 +12,10 @@ describe('resolveKey', () => {
   test('returns undefined for missing key', () => {
     expect(resolveKey({}, 'missing')).toBeUndefined();
   });
+
+  test('returns undefined for partially missing nested key', () => {
+    expect(resolveKey({ author: {} }, 'author.name')).toBeUndefined();
+  });
 });
 
 describe('renderString', () => {
@@ -35,6 +39,14 @@ describe('renderString', () => {
   test('resolves nested variable', () => {
     expect(renderString('by {{ author.name }}', { author: { name: 'Bob' } })).toBe('by Bob');
   });
+
+  test('handles string with no template variables', () => {
+    expect(renderString('no variables here', { name: 'unused' })).toBe('no variables here');
+  });
+
+  test('handles empty string', () => {
+    expect(renderString('', { name: 'World' })).toBe('');
+  });
 });
 
 describe('renderTemplateFiles', () => {
@@ -43,5 +55,16 @@ describe('renderTemplateFiles', () => {
     const result = renderTemplateFiles(files, { name: 'myapp' });
     expect(result[0].path).toBe('myapp/index.js');
     expect(result[0].content).toBe('const x = "myapp";');
+  });
+
+  test('renders multiple files', () => {
+    const files = [
+      { path: '{{name}}/index.js', content: '// {{name}}' },
+      { path: '{{name}}/README.md', content: '# {{name}}' },
+    ];
+    const result = renderTemplateFiles(files, { name: 'myapp' });
+    expect(result).toHaveLength(2);
+    expect(result[1].path).toBe('myapp/README.md');
+    expect(result[1].content).toBe('# myapp');
   });
 });
