@@ -18,6 +18,14 @@ describe('loggerPlugin', () => {
     expect(spy).toHaveBeenCalledWith(expect.stringContaining('2'));
     spy.mockRestore();
   });
+
+  test('afterScaffold handles empty filesWritten array', () => {
+    const spy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    const ctx = { filesWritten: [] };
+    loggerPlugin.afterScaffold(ctx);
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining('0'));
+    spy.mockRestore();
+  });
 });
 
 describe('outputNormalizerPlugin', () => {
@@ -55,5 +63,11 @@ describe('timestampPlugin', () => {
     const result = timestampPlugin.beforeRender(ctx);
     expect(result.variables.projectName).toBe('bar');
     expect(result.variables.author).toBe('Alice');
+  });
+
+  test('scaffoldedAt is a valid ISO 8601 date string', () => {
+    const ctx = { variables: {} };
+    const result = timestampPlugin.beforeRender(ctx);
+    expect(result.variables.scaffoldedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
   });
 });
