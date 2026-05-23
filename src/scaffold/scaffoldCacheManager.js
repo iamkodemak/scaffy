@@ -1,70 +1,55 @@
-/**
- * scaffoldCacheManager.js
- * High-level interface combining scaffoldCache and scaffoldCachePolicy
- * for use by scaffoldRunner and scaffoldPipeline.
- */
-
-const cache = require('./scaffoldCache');
-const policy = require('./scaffoldCachePolicy');
+import { hashOptions, set, get, remove, clear, size } from './scaffoldCache.js';
+import { isEnabled, getTTL } from './scaffoldCachePolicy.js';
 
 /**
- * Attempt to retrieve a cached context for the given options.
- * Returns null if not cacheable, expired, or not found.
+ * Attempt to retrieve a cached scaffold result for the given options.
+ * Returns null if caching is disabled or no entry exists.
  * @param {object} options
  * @returns {object|null}
  */
-function retrieve(options) {
-  if (!policy.isCacheable(options)) return null;
-  if (!cache.has(options)) return null;
-
-  const key = cache.hashOptions(options);
-  // Access internal entry for TTL check via listKeys + re-hash workaround
-  const context = cache.get(options);
-  return context || null;
+export function retrieve(options) {
+  if (!isEnabled()) return null;
+  const key = hashOptions(options);
+  return get(key) ?? null;
 }
 
 /**
- * Store a scaffold context if the options are cacheable.
+ * Store a scaffold result in the cache under the hashed options key.
+ * No-op if caching is disabled.
  * @param {object} options
- * @param {object} context
- * @returns {string|null} cache key or null if not stored
+ * @param {object} result
  */
-function store(options, context) {
-  if (!policy.isCacheable(options)) return null;
-  return cache.set(options, context);
+export function store(options, result) {
+  if (!isEnabled()) return;
+  const key = hashOptions(options);
+  const ttl = getTTL();
+  set(key, result, ttl);
 }
 
 /**
- * Invalidate cache entry for specific options.
+ * Remove a specific cache entry by options.
  * @param {object} options
  */
-function invalidate(options) {
-  return cache.invalidate(options);
+export function invalidate(options) {
+  const key = hashOptions(options);
+  remove(key);
 }
 
 /**
- * Clear all cached entries.
+ * Clear all cached scaffold results.
  */
-function clearAll() {
-  cache.clear();
+export function clearAll() {
+  clear();
 }
 
 /**
- * Return cache statistics.
+ * Return current cache statistics.
+ * @returns {{ size: number, enabled: boolean, ttl: number }}
  */
-function stats() {
+export function stats() {
   return {
-    size: cache.size(),
-    maxSize: cache.getMaxSize(),
-    ttlMs: policy.getTTL(),
-    enabled: policy.isEnabled(),
+    size: size(),
+    enabled: isEnabled(),
+    ttl: getTTL(),
   };
 }
-
-module.exports = {
-  retrieve,
-  store,
-  invalidate,
-  clearAll,
-  stats,
-};

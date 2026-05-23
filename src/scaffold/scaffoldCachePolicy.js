@@ -1,65 +1,54 @@
 /**
- * scaffoldCachePolicy.js
- * Defines cache eligibility rules and TTL-based expiry policies
- * for scaffold context caching.
+ * Cache policy configuration for scaffold result caching.
+ * Controls whether caching is active and the default TTL.
  */
 
-const DEFAULT_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const DEFAULT_TTL = 300; // seconds
 
-let ttlMs = DEFAULT_TTL_MS;
 let enabled = true;
+let ttl = DEFAULT_TTL;
 
-function setEnabled(flag) {
-  enabled = Boolean(flag);
+export function setEnabled(value) {
+  enabled = Boolean(value);
 }
 
-function isEnabled() {
+export function isEnabled() {
   return enabled;
 }
 
-function setTTL(ms) {
-  if (typeof ms !== 'number' || ms < 0) {
-    throw new Error('TTL must be a non-negative number in milliseconds');
+export function setTTL(seconds) {
+  if (typeof seconds !== 'number' || seconds < 0) {
+    throw new Error(`TTL must be a non-negative number, got: ${seconds}`);
   }
-  ttlMs = ms;
+  ttl = seconds;
 }
 
-function getTTL() {
-  return ttlMs;
+export function getTTL() {
+  return ttl;
 }
 
-function resetTTL() {
-  ttlMs = DEFAULT_TTL_MS;
-}
-
-/**
- * Returns true if the cached entry is still valid based on TTL.
- * @param {number} timestamp - Unix ms when the entry was stored
- */
-function isEntryValid(timestamp) {
-  if (ttlMs === 0) return true; // 0 means never expire
-  return Date.now() - timestamp < ttlMs;
+export function resetTTL() {
+  ttl = DEFAULT_TTL;
 }
 
 /**
- * Determines whether a given set of scaffold options is cacheable.
- * Options with prompts or dry-run mode are not cached.
- * @param {object} options
+ * Apply cache policy from a config object.
+ * @param {{ cache?: { enabled?: boolean, ttl?: number } }} config
  */
-function isCacheable(options) {
-  if (!enabled) return false;
-  if (options.dryRun) return false;
-  if (options.interactive) return false;
-  if (options.noCache) return false;
-  return true;
+export function applyPolicyFromConfig(config) {
+  const cacheConfig = config?.cache ?? {};
+  if (typeof cacheConfig.enabled === 'boolean') {
+    setEnabled(cacheConfig.enabled);
+  }
+  if (typeof cacheConfig.ttl === 'number') {
+    setTTL(cacheConfig.ttl);
+  }
 }
 
-module.exports = {
-  setEnabled,
-  isEnabled,
-  setTTL,
-  getTTL,
-  resetTTL,
-  isEntryValid,
-  isCacheable,
-};
+/**
+ * Reset policy to defaults (useful in tests).
+ */
+export function resetPolicy() {
+  enabled = true;
+  ttl = DEFAULT_TTL;
+}
